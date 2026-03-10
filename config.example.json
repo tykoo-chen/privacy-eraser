@@ -1,0 +1,17 @@
+{
+  "user": {
+    "name": "张三",
+    "aliases": ["Zhang San", "张san"],
+    "extras": ["某公司", "某大学"]
+  },
+  "monitoring": {
+    "enabled": true,
+    "frequency": "weekly",
+    "notify": true
+  },
+  "automation": {
+    "auto_report": false,
+    "screenshot": true,
+    "use_node_browser": true
+  }
+}

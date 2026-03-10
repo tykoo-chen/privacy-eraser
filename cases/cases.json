@@ -1,0 +1,43 @@
+{
+  "cases": [
+    {
+      "id": "85993ab4",
+      "url": "https://tieba.baidu.com/p/123456",
+      "platform": "baidu_tieba",
+      "platform_name": "百度贴吧",
+      "description": "贴吧帖子包含手机号",
+      "status": "reported",
+      "created_at": "2026-03-10T20:37:30.322790",
+      "updated_at": "2026-03-10T20:37:30.524845",
+      "notes": [
+        {
+          "time": "2026-03-10T20:37:30.524867",
+          "text": "已在贴吧APP举报"
+        }
+      ]
+    },
+    {
+      "id": "22606b0d",
+      "url": "https://www.xiaohongshu.com/explore/abc123",
+      "platform": "xiaohongshu",
+      "platform_name": "小红书",
+      "description": "小红书笔记",
+      "status": "pending",
+      "created_at": "2026-03-10T20:37:30.367627",
+      "updated_at": "2026-03-10T20:37:30.367643",
+      "notes": []
+    },
+    {
+      "id": "d33a19b2",
+      "url": "https://www.douyin.com/video/123456",
+      "platform": "douyin",
+      "platform_name": "抖音",
+      "description": "抖音视频",
+      "status": "pending",
+      "created_at": "2026-03-10T20:37:30.412598",
+      "updated_at": "2026-03-10T20:37:30.412615",
+      "notes": []
+    }
+  ],
+  "last_scan": null
+}
