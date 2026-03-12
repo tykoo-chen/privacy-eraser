@@ -10,6 +10,22 @@
       "created_at": "2026-03-10T20:39:46.567095",
       "updated_at": "2026-03-10T20:39:46.567113",
       "notes": []
+    },
+    {
+      "id": "1ad20904",
+      "url": "http://bjhiphop.com.cn/2015-competition-list.pdf",
+      "platform": "unknown",
+      "platform_name": "未知平台",
+      "description": "2015年北京市街舞比赛名单PDF，暴露真实姓名和学校信息",
+      "status": "resolved",
+      "created_at": "2026-03-12T15:11:47.418494",
+      "updated_at": "2026-03-12T15:12:32.738327",
+      "notes": [
+        {
+          "time": "2026-03-12T15:12:32.738349",
+          "text": "域名 bjhiphop.com.cn 已失效，DNS 解析失败，Wayback Machine 无缓存，内容已不可访问"
+        }
+      ]
     }
   ],
   "last_scan": null

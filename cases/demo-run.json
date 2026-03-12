@@ -1,0 +1,27 @@
+{
+  "run_id": "DEMO-001",
+  "started_at": "2026-03-12T15:10:00Z",
+  "target_name": "卢友昂",
+  "cases": [
+    {
+      "case_id": "PE-001",
+      "target_url": "http://bjhiphop.com.cn/2015-competition-list.pdf",
+      "platform": "独立网站 (bjhiphop.com.cn)",
+      "violation_type": "personal_info_exposed",
+      "content_description": "2015年北京市街舞比赛参赛名单PDF，包含真实姓名和学校信息",
+      "discovered_at": "2026-03-09T00:00:00Z",
+      "phase": "outreach_preparing",
+      "status": "active",
+      "outreach": {
+        "contact_method": "website_contact / whois_email",
+        "message_draft": null,
+        "sent_at": null
+      },
+      "escalation": {
+        "deadline": null,
+        "report_filed": false,
+        "report_method": null
+      }
+    }
+  ]
+}

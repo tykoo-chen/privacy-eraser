@@ -1,331 +1,159 @@
 ---
-name: personal-pr
-description: 个人公关 Agent。管理你的数字身份：扫描互联网上的个人信息，智能判断哪些需要处理，自动执行删除/协商/稀释/更新，持续守护你的网络形象。Triggers: "帮我管理网络形象", "清理网上的信息", "隐私保护", "删我信息", "网上有我的信息", "清理数字足迹", "我想保护隐私", "帮我看看网上有什么关于我的", "personal PR", "privacy"
-version: 1.0.0
+name: privacy-eraser
+description: |
+  End-to-end privacy protection: discover exposed personal info, request removal politely, then escalate to formal reports if ignored.
+  Orchestrates two sub-skills: personalized-outreach (friendly DM first) and privacy-report (formal complaint if no action).
+  Use when: (1) user wants personal info removed from the internet, (2) found doxxing or data exposure, (3) data broker cleanup, (4) ongoing privacy monitoring.
+  Triggers: "remove my info", "clean up my privacy", "privacy eraser", "someone posted my info", "删除我的信息", "隐私清理", "有人泄露了我的信息".
 ---
 
-# Personal PR Agent — 个人公关 Agent
+# Privacy Eraser
 
-你是用户的私人公关顾问。你的工作是让用户在互联网上的形象符合他自己的期望。
+End-to-end privacy protection through a two-phase approach: **ask nicely first, escalate if ignored.**
 
-**不是让用户从互联网消失，而是让他的数字身份是他想要的样子。**
+## Core Philosophy
 
----
+Most people will remove content when asked politely. Formal reports are slow, adversarial, and should be the last resort. This skill always tries diplomacy first.
 
-## 核心原则
-
-1. **用户只做决策，你做执行。** 不要让用户操作任何具体步骤。
-2. **先礼后兵。** 永远先尝试友好沟通，沟通无果再升级。
-3. **策略多元。** 删除只是手段之一。修改、稀释、更新、SEO 都是工具。
-4. **持续跟进。** 任务不是一次性的，需要追踪效果。
-5. **保护正面内容。** 只处理用户明确想处理的内容，绝不误伤正面信息。
-
----
-
-## 对话流程
-
-### 第一步：了解用户
-
-跟用户聊天，获取以下信息：
+## Orchestration Flow
 
 ```
-必须获取：
-- 姓名（真名 + 常用网名）
-- 用户希望自己在网上是什么形象（"理想数字身份"）
-- 是否有特别想处理的内容（比如特定 URL、特定事件）
-
-尽量获取（提高搜索精度）：
-- 工作单位/学校
-- 常用平台
-- 手机号（用于搜索是否泄露，不用于其他目的）
+[Discovery] → [Phase 1: Outreach] → [Wait] → [Phase 2: Report]
+                    ↓                              ↓
+           personalized-outreach              privacy-report
+              (friendly DM)               (formal complaint)
 ```
 
-对话示例：
-```
-你：你好！我是你的个人公关 Agent。告诉我你的名字，我帮你看看互联网上有哪些关于你的信息。
-    你希望自己在网上呈现什么形象？有没有特别想处理的内容？
-
-用户：我叫张三，在 XX 公司工作。我不想让别人搜到我的手机号和旧简历。
-
-你：收到。我现在去搜索一下，找到结果后跟你确认。
-```
-
-如果在 OpenClaw 环境中运行，可以直接从 USER.md 获取用户 context。
-
-### 第二步：扫描互联网
-
-使用 `web_search` 搜索用户信息。搜索策略：
-
-```bash
-# 基础搜索
-web_search query='"张三"'
-web_search query='"张三" 手机 OR 联系方式 OR 电话'
-web_search query='"张三" 简历 OR resume'
-
-# 指定平台搜索
-web_search query='"张三" site:wenku.baidu.com'
-web_search query='"张三" site:zhihu.com'
-web_search query='"张三" site:weibo.com'
-web_search query='"张三" site:xiaohongshu.com'
-
-# 关联搜索（如果有公司/学校信息）
-web_search query='"张三" "XX公司"'
-web_search query='"张三" "XX大学"'
-
-# 网名搜索
-web_search query='"用户网名"'
-```
-
-### 第三步：分析 & 分类结果
-
-对搜索结果进行分类，**不要自作主张，让用户确认**：
-
-```
-🔴 建议立即处理（隐私泄露）
-   - 包含手机号、身份证号、住址等
-   - 例："百度文库上有你的简历，包含手机号 138****1234"
-
-🟡 建议处理（负面/过时）
-   - 负面评价、不实信息、过时资料
-   - 例："知乎上有一个 3 年前的帖子讨论你，内容不太正面"
-
-🟢 正面/中性（建议保留）
-   - 正面报道、正常社交内容
-   - 例："你在公司官网的介绍页面"
-
-⚪ 无关/低风险
-   - 同名他人、无关内容
-```
-
-展示给用户时要简洁，例如：
-```
-你：搜索完了。关于你的信息，我找到了 12 条内容：
-
-🔴 需要处理（3 条）：
-   1. 百度文库 - 你的旧简历，包含手机号和家庭住址
-   2. 知乎回答 - 有人贴了你的微信号
-   3. 某论坛 - 你的手机号被曝光
-
-🟡 建议关注（2 条）：
-   4. 微博 - 有人发了关于你的负面评价
-   5. 脉脉 - 你 3 年前的职位信息，已经过时
-
-🟢 正面内容（5 条）：
-   6-10. 公司官网介绍、技术博客文章等（建议保留）
-
-你想怎么处理？比如："手机号的都处理，微博那个不管，脉脉更新一下"
-```
-
-### 第四步：用户确认 → 自动执行
-
-用户只需给出大方向。**不需要用户确认每个具体步骤。**
-
-然后根据策略决策树自动选择最优手段，开始执行。
-
-### 第五步：通知进展
-
-执行过程中精简汇报关键节点：
-```
-✅ 好的汇报：
-"处理进展：
- - 百度文库简历：已联系上传者，对方同意 24h 内删除
- - 知乎手机号：已举报，平台预计 3-5 天处理
- - 微博负面帖：已私信博主，暂未回复，72h 后如无回复我会举报
- 有新进展我会通知你。"
-
-❌ 不好的汇报：
-"我现在要去知乎举报了。首先我需要打开 zhihu.com/report，然后点击..."
-（用户不关心你的每一个操作步骤）
-```
-
-### 第六步：持续跟踪
-
-- 48h 后自动检查协商结果，未回复的自动升级策略
-- 7 天后检查举报结果，未处理的向监管机构投诉
-- 确认已删除的内容，同步提交搜索引擎快照删除
-- 定期扫描是否有新内容出现
-
----
-
-## 策略决策树
-
-```
-发现需要处理的内容
-│
-├─ 【隐私泄露】手机号/身份证/住址/银行卡
-│   ├─ 有明确发布者 → 私信协商(24h) → 无果则举报隐私泄露
-│   ├─ 匿名内容 → 直接举报（隐私类成功率高）
-│   └─ 搜索缓存 → 同步提交快照删除申请
-│
-├─ 【负面评价/不实信息】
-│   ├─ 有明确博主
-│   │   ├─ 内容不实 → 私信沟通+提供证据(72h) → 举报不实信息
-│   │   ├─ 内容属实但负面 → 私信协商(72h) → 无果则 SEO 稀释
-│   │   └─ 大V发布(粉丝多) → 谨慎！优先 SEO 稀释，避免引发更多关注
-│   ├─ 匿名内容 → 举报诽谤/人身攻击
-│   └─ 完全无法删除 → SEO 稀释 + 信息对冲
-│
-├─ 【过时信息】旧简历/旧资料/旧职位
-│   ├─ 自己可编辑 → 直接更新
-│   ├─ 他人上传 → 联系上传者协商更新/删除
-│   └─ 搜索缓存 → 提交快照更新/删除
-│
-└─ 【强化正面内容】
-    ├─ 已有正面内容 → SEO 优化
-    └─ 需要新内容 → 建议用户在优质平台发布
-```
-
-**时间线升级机制：**
-```
-第一轮（Day 0）   → 友好协商、内容更新、SEO 稀释
-第二轮（Day 2-3） → 协商未果的 → 平台举报
-第三轮（Day 7+）  → 举报未果的 → 法律函件、监管投诉
-```
-
----
-
-## 执行手段
-
-### 1. 友好协商
-
-适用：有明确内容发布者
-
-通过平台私信联系发布者。根据场景选择语气：
-
-**友好版（首选）：**
-```
-你好，我是 [姓名]，注意到你发布的内容中包含了我的个人信息（[具体信息]）。
-这些信息的公开给我带来了困扰，能否麻烦你删除/修改一下？非常感谢！🙏
-```
-
-**正式版（首次无回复后）：**
-```
-你好，我之前联系过你关于删除个人信息的请求。根据《个人信息保护法》第四十七条，
-个人有权要求删除其个人信息。希望我们能友好协商解决。如 3 个工作日内未得到回复，
-我可能需要通过平台正式渠道处理。感谢理解。
-```
-
-### 2. 平台举报
-
-适用：协商无果、匿名内容、严重隐私泄露
-
-使用浏览器自动化到平台提交举报。详见 `references/platforms.md`。
-
-技巧：
-- 举报类型选「侵犯隐私」「人身攻击」比「其他」处理快
-- 微博同时走举报 + 客服私信效果好
-- 附身份证明能加速处理
-
-### 3. 搜索引擎快照删除
-
-适用：原内容已删但搜索还有缓存
-
-```
-百度：help.baidu.com/webmaster/add → 个人信息保护
-Google：google.com/webmasters/tools/legal-removal-request
-Bing：bing.com/webmaster/tools/contentremoval
-```
-
-前提：原页面必须已删除或修改，否则快照删除无效。
-
-### 4. SEO 稀释
-
-适用：无法删除的内容
-
-通过在高权重平台发布正面内容，把负面内容在搜索结果中往后压：
-- 知乎回答/文章
-- 微信公众号文章
-- 个人博客
-- LinkedIn 更新
-- GitHub 项目
-- 技术社区文章
-
-内容要自然有价值，不要堆砌关键词。
-
-### 5. 内容更新
-
-适用：过时信息
-
-- 自己可编辑 → 直接修改
-- 第三方 → 联系平台/上传者要求更新
-- 搜索缓存 → 原内容更新后提交快照刷新
-
-### 6. 信息对冲
-
-适用：完全无法删除且 SEO 稀释效果不好（最后手段）
-
-在互联网上增加搜索结果的多样性和噪声，降低特定内容的辨识度。
-**需要用户明确同意才能使用此策略。**
-
-### 7. 法律手段
-
-适用：严重侵权，其他手段无效
-
-- 发送律师函（`templates/legal_warning_cn.md`）
-- 向网信办举报（12377.cn）
-- 向工信部投诉
-- 建议用户咨询律师
-
----
-
-## 浏览器自动化
-
-使用 OpenClaw 的浏览器能力执行操作（私信、举报等）：
-
-```bash
-# 检查可用节点
-nodes action=status
-
-# 导航
-browser action=navigate target=node profile=chrome targetUrl="<url>"
-
-# 快照（了解页面结构）
-browser action=snapshot target=node
-
-# 操作
-browser action=act target=node request={"kind":"click","ref":"<element>"}
-browser action=act target=node request={"kind":"fill","ref":"<input>","text":"<content>"}
-
-# 截图存证
-browser action=screenshot target=node
-```
-
----
-
-## 任务跟踪
-
-使用 `tools/eraser.py` 记录所有任务状态：
-
-```bash
-python3 tools/eraser.py add <url> --desc "协商删除简历"
-python3 tools/eraser.py update <id> <status> --note "已私信博主，等待回复"
-python3 tools/eraser.py list
-python3 tools/eraser.py info <id>
-```
-
-状态流转：`pending → contacted → reported → following → resolved / failed`
-
----
-
-## 定期监控
-
-```bash
-cron action=add job={
-  "name": "personal-pr-monitor",
-  "schedule": {"kind": "cron", "expr": "0 9 * * 1", "tz": "Asia/Shanghai"},
-  "payload": {"kind": "systemEvent", "text": "个人公关监控：执行每周扫描，搜索用户姓名，检查新内容和已处理内容状态"},
-  "sessionTarget": "main"
+### Phase 0: Discovery
+
+Input: User provides one of:
+- Their name / identifiers to scan for
+- Specific URLs where their info is exposed
+- A previous scan result
+
+For each discovered exposure, create a case:
+
+```json
+{
+  "case_id": "PE-001",
+  "target_url": "https://...",
+  "platform": "twitter",
+  "violation_type": "personal_info_exposed",
+  "content_owner": "@username or site admin",
+  "discovered_at": "2026-03-12T14:00:00Z",
+  "phase": "discovery",
+  "status": "new"
 }
 ```
 
----
+Save all cases to `privacy-eraser-cases.json`.
 
-## 参考资料
+### Phase 1: Friendly Outreach (personalized-outreach)
 
-| 文件 | 内容 |
-|------|------|
-| `references/platforms.md` | 50+ 平台举报入口、客服电话、处理时效 |
-| `references/legal_basis.md` | 法律依据（个保法、网安法、GDPR、CCPA） |
-| `templates/` | 各类协商/投诉/法律函件模板 |
-| `tools/eraser.py` | 任务管理 CLI |
-| `tools/scanner.py` | 搜索辅助工具 |
+For each case, invoke `personalized-outreach` with this context:
+
+**Goal:** Request content removal in a friendly, non-threatening way.
+
+**Message strategy:**
+- Acknowledge the person — don't be aggressive
+- Explain what personal info is exposed and why it matters
+- Make a clear, specific ask (remove X from Y)
+- Offer to help (provide exact content to remove)
+- Mention that formal channels exist, but you'd prefer to resolve it directly
+- Set a soft deadline without being threatening
+
+**Tone templates by platform:**
+
+**Individual poster (Twitter/Reddit/etc):**
+> "Hi — I noticed [specific post/content] contains my [personal info type]. I'd really appreciate if you could remove/redact that. Happy to help point out exactly what needs changing. Thanks!"
+
+**Website/data broker:**
+> "Hi, I'm writing to request removal of my personal information from [URL]. Under [GDPR Art.17 / CCPA / applicable law], I'd like to exercise my right to deletion. The specific data is: [list]. Please confirm removal within a reasonable timeframe."
+
+**Company/organization:**
+> "Hello, I'm reaching out regarding personal data published at [URL]. I'd like to request its removal. I believe this was unintentional, and I'd appreciate a quick resolution before I need to pursue formal channels."
+
+After sending, update case:
+```json
+{
+  "phase": "outreach_sent",
+  "outreach_sent_at": "2026-03-12T14:30:00Z",
+  "escalation_deadline": "2026-03-13T02:30:00Z",
+  "message_sent": "..."
+}
+```
+
+### Phase 2: Monitoring & Escalation
+
+**Check at +12 hours** after outreach:
+
+1. **Content removed?** → Mark case as `resolved`. Done.
+2. **Response received, in progress?** → Extend deadline. Update notes.
+3. **No response / refused?** → Escalate to Phase 3.
+
+Use a cron job or heartbeat check to monitor:
+```
+For each case where phase == "outreach_sent":
+  if now > escalation_deadline:
+    check if content still exists
+    if still exists → escalate
+    if removed → mark resolved
+```
+
+### Phase 3: Formal Report (privacy-report)
+
+For unresolved cases, invoke `privacy-report`:
+
+- Generate formal complaint using platform's official reporting mechanism
+- Include evidence: original URL, screenshot, outreach attempt record
+- Reference the friendly outreach attempt (shows good faith)
+- File under appropriate legal framework (GDPR/CCPA/platform ToS)
+
+Update case:
+```json
+{
+  "phase": "reported",
+  "reported_at": "2026-03-13T03:00:00Z",
+  "report_id": "PR-001",
+  "report_method": "Google GDPR removal form"
+}
+```
+
+### Phase 4: Follow-Up
+
+After formal report:
+- Check every 7 days if content is removed
+- If platform provides a response, log it
+- If no action after 30 days, notify user with options:
+  - Re-file complaint
+  - Contact data protection authority (DPA)
+  - Consider legal action
+
+## Case Lifecycle
+
+```
+new → outreach_sent → [resolved | escalated]
+                          ↓
+                      reported → [resolved | follow_up | dpa_complaint]
+```
+
+## Status Dashboard
+
+When user asks for status, display:
+
+```
+Privacy Eraser — Active Cases
+─────────────────────────────
+PE-001  twitter.com/xxx/123    Phase 1 (DM sent 2h ago)     ⏳
+PE-002  spokeo.com/john-doe    Phase 2 (reported to Spokeo)  📋
+PE-003  reddit.com/r/xxx/456   Resolved (removed by user)    ✅
+PE-004  example-blog.com/post  Escalation in 10h             ⏰
+```
+
+## Sub-Skill Dependencies
+
+This skill requires two companion skills to be installed:
+- `personalized-outreach` — handles Phase 1 friendly messaging
+- `privacy-report` — handles Phase 3 formal reporting
+
+If either is missing, Privacy Eraser will note which phase cannot execute and suggest installing the missing skill.
