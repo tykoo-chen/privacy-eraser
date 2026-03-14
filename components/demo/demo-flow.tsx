@@ -1,449 +1,400 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 
-// ============================================================
-// Types
-// ============================================================
+type Step = "scanning" | "results" | "strategy" | "executing" | "done";
 
 interface ScanResult {
   id: number;
   level: "red" | "yellow" | "green" | "grey";
   platform: string;
-  platformIcon: string;
   title: string;
   url: string;
   detail: string;
   assignedSkill?: string;
-  skillIcon?: string;
-  status?: string;
+  selfEditable?: boolean;
 }
 
-// ============================================================
-// Mock Data Generator
-// ============================================================
-
-function generateMockResults(name: string): ScanResult[] {
+function generateResults(name: string): ScanResult[] {
   return [
-    { id: 1, level: "red", platform: "百度文库", platformIcon: "📄", title: `${name}的个人简历`, url: "wenku.baidu.com/view/abc123", detail: `包含手机号 138****1234、家庭住址`, assignedSkill: "Negotiator", skillIcon: "💬" },
-    { id: 2, level: "red", platform: "知乎", platformIcon: "💬", title: `${name}的微信号被泄露`, url: "zhihu.com/answer/987654", detail: "某回答中贴出了完整微信号", assignedSkill: "Reporter", skillIcon: "🚨" },
-    { id: 3, level: "red", platform: "某论坛", platformIcon: "🌐", title: `${name}手机号曝光`, url: "forum.example.com/t/45678", detail: "帖子标题直接包含手机号", assignedSkill: "Reporter", skillIcon: "🚨" },
-    { id: 4, level: "yellow", platform: "微博", platformIcon: "🔴", title: `关于${name}的负面评价`, url: "weibo.com/status/112233", detail: "用户发布了不实评价，172 条转发", assignedSkill: "Negotiator", skillIcon: "💬" },
-    { id: 5, level: "yellow", platform: "脉脉", platformIcon: "👔", title: `${name}的旧职位信息`, url: "maimai.cn/profile/xxx", detail: "显示 3 年前的职位，已经过时", assignedSkill: "Negotiator", skillIcon: "💬" },
-    { id: 6, level: "yellow", platform: "小红书", platformIcon: "📕", title: `有人转发了${name}的照片`, url: "xiaohongshu.com/note/aaa", detail: "未经授权使用个人照片", assignedSkill: "Reporter", skillIcon: "🚨" },
-    { id: 7, level: "green", platform: "公司官网", platformIcon: "🏢", title: `${name} - 团队介绍`, url: "company.com/team", detail: "正面的职业介绍页面" },
-    { id: 8, level: "green", platform: "GitHub", platformIcon: "🐙", title: `${name}的开源项目`, url: "github.com/username", detail: "技术贡献，正面内容" },
-    { id: 9, level: "green", platform: "LinkedIn", platformIcon: "💼", title: `${name} | LinkedIn`, url: "linkedin.com/in/xxx", detail: "专业社交档案" },
-    { id: 10, level: "grey", platform: "百度", platformIcon: "🔍", title: `同名${name}的新闻`, url: "baidu.com/s?q=...", detail: "确认为同名他人，无关" },
-    { id: 11, level: "grey", platform: "微博", platformIcon: "🔴", title: `另一个${name}`, url: "weibo.com/u/other", detail: "非本人账号" },
+    { id: 1, level: "red", platform: "百度文库", title: `${name}的个人简历`, url: "wenku.baidu.com/view/abc123", detail: "包含手机号 138****1234、家庭住址", assignedSkill: "Negotiate" },
+    { id: 2, level: "red", platform: "知乎", title: `${name}的微信号被泄露`, url: "zhihu.com/answer/987654", detail: "某回答中贴出了完整微信号", assignedSkill: "Report" },
+    { id: 3, level: "red", platform: "某论坛", title: `${name}手机号曝光`, url: "forum.example.com/t/45678", detail: "帖子标题直接包含手机号", assignedSkill: "Report" },
+    { id: 4, level: "yellow", platform: "微博", title: `关于${name}的负面评价`, url: "weibo.com/status/112233", detail: "不实评价，172 条转发", assignedSkill: "Negotiate" },
+    { id: 5, level: "yellow", platform: "脉脉", title: `${name}的旧职位信息`, url: "maimai.cn/profile/xxx", detail: "显示 3 年前的职位，已过时", assignedSkill: "Self-Edit", selfEditable: true },
+    { id: 6, level: "yellow", platform: "LinkedIn", title: `${name}过时的教育经历`, url: "linkedin.com/in/xxx", detail: "还显示本科信息，已读研", assignedSkill: "Self-Edit", selfEditable: true },
+    { id: 7, level: "green", platform: "公司官网", title: `${name} - 团队介绍`, url: "company.com/team", detail: "正面职业介绍" },
+    { id: 8, level: "green", platform: "GitHub", title: `${name}的开源项目`, url: "github.com/username", detail: "技术贡献" },
+    { id: 9, level: "grey", platform: "百度", title: `同名${name}的新闻`, url: "baidu.com/s?q=...", detail: "确认为同名他人" },
   ];
 }
 
-// ============================================================
-// Steps
-// ============================================================
-
-type Step = "scanning" | "results" | "strategy" | "executing" | "done";
-
-const levelConfig = {
-  red: { label: "🔴 立即处理", bg: "bg-red-50 border-red-200", text: "text-red-700", dot: "bg-red-500" },
-  yellow: { label: "🟡 建议处理", bg: "bg-amber-50 border-amber-200", text: "text-amber-700", dot: "bg-amber-500" },
-  green: { label: "🟢 正面保留", bg: "bg-emerald-50 border-emerald-200", text: "text-emerald-700", dot: "bg-emerald-500" },
-  grey: { label: "⚪ 无关内容", bg: "bg-gray-50 border-gray-200", text: "text-gray-500", dot: "bg-gray-400" },
-};
-
-// ============================================================
-// Component
-// ============================================================
+const levelLabel: Record<string, string> = { red: "需紧急处理", yellow: "建议处理", green: "正面保留", grey: "无关" };
+const riskColor: Record<string, string> = { red: "text-[var(--redact)] font-medium", yellow: "text-[var(--ink)]", green: "text-[var(--ink-light)]", grey: "text-[var(--border-faint)]" };
+const riskIdx: Record<string, string> = { red: "0.9+", yellow: "0.5–0.8", green: "0.1", grey: "0.0" };
 
 export function DemoFlow({ userName, onReset }: { userName: string; onReset: () => void }) {
   const [step, setStep] = useState<Step>("scanning");
   const [scanProgress, setScanProgress] = useState(0);
   const [scanLog, setScanLog] = useState<string[]>([]);
-  const [results, setResults] = useState<ScanResult[]>([]);
-  const [executionLog, setExecutionLog] = useState<{ time: string; icon: string; text: string; skill: string }[]>([]);
-  const [executionIndex, setExecutionIndex] = useState(0);
+  const [executionLog, setExecutionLog] = useState<{ text: string; skill: string }[]>([]);
+  const [execIdx, setExecIdx] = useState(0);
+  const [checked, setChecked] = useState<Set<number>>(new Set());
 
-  const allResults = generateMockResults(userName);
+  const allResults = generateResults(userName);
 
-  // Scanning animation
+  // Initialize checked items (red + yellow)
+  useEffect(() => {
+    const initial = new Set(allResults.filter(r => r.level === "red" || r.level === "yellow").map(r => r.id));
+    setChecked(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userName]);
+
+  // Scan animation
   useEffect(() => {
     if (step !== "scanning") return;
-
     const queries = [
       `web_search "${userName}"`,
       `web_search "${userName}" 手机 OR 联系方式`,
       `web_search "${userName}" 简历 OR resume`,
-      `web_search "${userName}" site:wenku.baidu.com`,
       `web_search "${userName}" site:zhihu.com`,
       `web_search "${userName}" site:weibo.com`,
-      `web_search "${userName}" site:xiaohongshu.com`,
+      `web_search "${userName}" site:wenku.baidu.com`,
       `web_search "${userName}" site:maimai.cn`,
-      `检查数据经纪人网站...`,
-      `检查 AI 搜索引擎提及...`,
-      `分析搜索结果...`,
-      `分类标记风险等级...`,
+      `检查 LinkedIn / GitHub...`,
+      `分析结果，标记风险等级...`,
     ];
-
     let i = 0;
-    const timer = setInterval(() => {
+    const t = setInterval(() => {
       if (i < queries.length) {
-        setScanLog((prev) => [...prev, queries[i]]);
+        setScanLog(p => [...p, queries[i]]);
         setScanProgress(Math.round(((i + 1) / queries.length) * 100));
         i++;
-      } else {
-        clearInterval(timer);
-        setResults(allResults);
-        setTimeout(() => setStep("results"), 500);
-      }
+      } else { clearInterval(t); setTimeout(() => setStep("results"), 400); }
     }, 400);
-
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => clearInterval(t);
   }, [step, userName]);
 
-  // Execution animation
-  const executionSteps = [
-    { time: "00:00", icon: "💬", text: `向百度文库简历上传者发送友好私信，请求删除`, skill: "Negotiator" },
-    { time: "00:02", icon: "🚨", text: `向知乎提交隐私举报：微信号泄露`, skill: "Reporter" },
-    { time: "00:03", icon: "🚨", text: `向论坛管理员举报：手机号曝光`, skill: "Reporter" },
-    { time: "00:05", icon: "💬", text: `向微博博主发送私信：请求删除不实评价`, skill: "Negotiator" },
-    { time: "00:06", icon: "💬", text: `向脉脉联系更新过时职位信息`, skill: "Negotiator" },
-    { time: "00:08", icon: "🚨", text: `向小红书举报：未授权使用个人照片`, skill: "Reporter" },
-    { time: "00:10", icon: "📈", text: `制定 SEO 稀释策略：准备在知乎、LinkedIn 发布正面内容`, skill: "SEO Diluter" },
-    { time: "00:11", icon: "🗑️", text: `检查数据经纪人网站，发现 3 个需要 Opt-out`, skill: "Data Broker Cleanup" },
-    { time: "00:12", icon: "🔍", text: `提交百度快照删除申请`, skill: "Reporter" },
-    { time: "00:13", icon: "📊", text: `设置每周一 9:00 自动监控扫描`, skill: "Monitor" },
-    { time: "00:15", icon: "✅", text: `第一轮处理完成。已联系 3 人，已举报 4 条，待跟进 7 项`, skill: "Orchestrator" },
+  // Execute animation
+  const execSteps = [
+    { text: `直接修改 脉脉 过时职位信息（自有账号）`, skill: "Self-Edit" },
+    { text: `直接更新 LinkedIn 教育经历（自有账号）`, skill: "Self-Edit" },
+    { text: `向百度文库上传者发送友好私信`, skill: "Negotiate" },
+    { text: `向知乎提交隐私举报：微信号泄露`, skill: "Report" },
+    { text: `向论坛管理员举报：手机号曝光`, skill: "Report" },
+    { text: `向微博博主发送私信：请求删除不实评价`, skill: "Negotiate" },
+    { text: `制定 SEO 稀释策略（并行启动）`, skill: "SEO Dilute" },
+    { text: `提交百度快照删除申请`, skill: "Report" },
+    { text: `设置每周自动监控扫描`, skill: "Monitor" },
+    { text: `第一轮完成：直接改 2 项，联系 2 人，举报 3 条`, skill: "完成" },
   ];
 
   useEffect(() => {
     if (step !== "executing") return;
-
-    const steps = [...executionSteps];
-    let i = 0;
-    let cancelled = false;
-    const timer = setInterval(() => {
+    const steps = [...execSteps];
+    let i = 0, cancelled = false;
+    setExecutionLog([]);
+    setExecIdx(0);
+    const t = setInterval(() => {
       if (cancelled) return;
       if (i < steps.length) {
-        const currentStep = steps[i];
-        setExecutionLog((prev) => [...prev, currentStep]);
-        setExecutionIndex(i + 1);
+        const current = steps[i];
+        if (current) {
+          setExecutionLog(p => [...p, current]);
+          setExecIdx(i + 1);
+        }
         i++;
-      } else {
-        clearInterval(timer);
-        if (!cancelled) setTimeout(() => setStep("done"), 800);
-      }
-    }, 600);
-
-    return () => { cancelled = true; clearInterval(timer); };
+      } else { clearInterval(t); if (!cancelled) setTimeout(() => setStep("done"), 600); }
+    }, 500);
+    return () => { cancelled = true; clearInterval(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  const redCount = allResults.filter((r) => r.level === "red").length;
-  const yellowCount = allResults.filter((r) => r.level === "yellow").length;
-  const greenCount = allResults.filter((r) => r.level === "green").length;
-  const greyCount = allResults.filter((r) => r.level === "grey").length;
+  const toggleCheck = (id: number) => {
+    setChecked(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const stepLabels = ["扫描中", "结果审查", "策略分配", "执行中", "完成"];
+  const stepKeys: Step[] = ["scanning", "results", "strategy", "executing", "done"];
+  const curIdx = stepKeys.indexOf(step);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">Privacy Eraser</h1>
-          <p className="text-sm text-muted-foreground">正在为 <strong>{userName}</strong> 执行个人公关服务</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={onReset}>← 返回</Button>
-      </div>
+    <div className="grid grid-cols-[240px_1fr] gap-16 max-md:grid-cols-1 max-md:gap-6">
+      {/* Left ledger */}
+      <aside>
+        <header className="border-b-2 border-[var(--ink)] pb-3 mb-6">
+          <h1 className="font-[family-name:var(--font-serif)] text-[2rem] leading-[1.1] tracking-[-0.02em]">
+            隐私扫描
+          </h1>
+          <div className="font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-[0.05em] text-[var(--ink-light)] mt-1.5">
+            目标: {userName} // 模拟演示
+          </div>
+        </header>
 
-      {/* Progress bar */}
-      <div className="flex items-center gap-2 mb-8">
-        {(["scanning", "results", "strategy", "executing", "done"] as Step[]).map((s, i) => {
-          const labels = ["扫描", "结果", "策略", "执行", "完成"];
-          const icons = ["🔍", "📋", "🎯", "⚡", "✅"];
-          const stepOrder = ["scanning", "results", "strategy", "executing", "done"];
-          const currentIndex = stepOrder.indexOf(step);
-          const isActive = i <= currentIndex;
-          const isCurrent = s === step;
+        {/* Progress index */}
+        <ul className="font-[family-name:var(--font-mono)] text-[0.85rem] space-y-2">
+          {stepLabels.map((label, i) => (
+            <li key={label} className={`flex items-baseline ${i === curIdx ? "font-medium" : "text-[var(--ink-light)]"}`}>
+              <span className="w-[30px] shrink-0">{String(i + 1).padStart(2, "0")}.</span>
+              <span className={i === curIdx ? "" : ""}>{label}</span>
+              <span className="flex-1 border-b border-dotted border-[var(--border-faint)] mx-2 relative top-[-3px]" />
+              <span className="text-[0.75rem]">{i < curIdx ? "✓" : i === curIdx ? "●" : "○"}</span>
+            </li>
+          ))}
+        </ul>
 
-          return (
-            <div key={s} className="flex items-center gap-2 flex-1">
-              <div className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-                isCurrent ? "text-foreground" : isActive ? "text-foreground/70" : "text-muted-foreground/40"
-              }`}>
-                <span>{icons[i]}</span>
-                <span className="hidden sm:inline">{labels[i]}</span>
-              </div>
-              {i < 4 && (
-                <div className="flex-1 h-0.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-500"
-                    style={{ width: isActive ? "100%" : "0%" }}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+        <button onClick={onReset} className="mt-8 font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)] hover:text-[var(--ink)] border-b border-dotted border-[var(--border-faint)] hover:border-[var(--ink)] transition-colors cursor-pointer">
+          ← 返回首页
+        </button>
+      </aside>
 
-      {/* ============ SCANNING ============ */}
-      {step === "scanning" && (
-        <div className="space-y-4">
-          <div className="rounded-xl border bg-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold">🔍 Scanner Skill 执行中</h2>
-              <span className="text-sm text-muted-foreground font-mono">{scanProgress}%</span>
+      {/* Right examination area */}
+      <section>
+        {/* SCANNING */}
+        {step === "scanning" && (
+          <div>
+            <header className="flex justify-between items-end border-b border-[var(--ink)] pb-2 mb-6">
+              <h2 className="font-[family-name:var(--font-mono)] text-[1.3rem] uppercase tracking-[-0.01em]">正在扫描</h2>
+              <span className="font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)]">{scanProgress}%</span>
+            </header>
+            <div className="w-full h-[3px] bg-[var(--border-faint)] mb-6">
+              <div className="h-full bg-[var(--ink)] transition-all duration-300" style={{ width: `${scanProgress}%` }} />
             </div>
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-4">
-              <div
-                className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                style={{ width: `${scanProgress}%` }}
-              />
-            </div>
-            <div className="bg-muted/50 rounded-lg p-4 font-mono text-xs space-y-1.5 max-h-64 overflow-y-auto">
-              {scanLog.map((log, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="text-emerald-500 shrink-0">❯</span>
-                  <span className="text-muted-foreground">{log}</span>
+            <div className="border border-[var(--border-faint)] p-4 font-[family-name:var(--font-mono)] text-[0.8rem] space-y-1.5 max-h-[300px] overflow-y-auto">
+              {scanLog.map((l, i) => (
+                <div key={i} className="flex gap-2 text-[var(--ink-light)]">
+                  <span className="text-[var(--ink)] shrink-0">❯</span>
+                  <span>{l}</span>
                 </div>
               ))}
-              {scanProgress < 100 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-blue-500 animate-pulse">▋</span>
-                </div>
-              )}
+              {scanProgress < 100 && <div className="text-[var(--ink)] animate-pulse">▋</div>}
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ============ RESULTS ============ */}
-      {step === "results" && (
-        <div className="space-y-4">
-          <div className="rounded-xl border bg-card p-6">
-            <h2 className="font-semibold mb-1">📋 扫描结果</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              找到 {allResults.length} 条关于 <strong>{userName}</strong> 的内容
-            </p>
-
-            {/* Summary */}
-            <div className="grid grid-cols-4 gap-3 mb-6">
-              {[
-                { count: redCount, label: "需处理", color: "bg-red-500", bg: "bg-red-50" },
-                { count: yellowCount, label: "建议处理", color: "bg-amber-500", bg: "bg-amber-50" },
-                { count: greenCount, label: "正面保留", color: "bg-emerald-500", bg: "bg-emerald-50" },
-                { count: greyCount, label: "无关", color: "bg-gray-400", bg: "bg-gray-50" },
-              ].map((item) => (
-                <div key={item.label} className={`${item.bg} rounded-lg p-3 text-center`}>
-                  <div className="text-2xl font-bold">{item.count}</div>
-                  <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                    <span className={`w-1.5 h-1.5 rounded-full ${item.color}`} />
-                    {item.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Results list */}
-            <div className="space-y-2">
-              {(["red", "yellow", "green", "grey"] as const).map((level) => {
-                const items = allResults.filter((r) => r.level === level);
-                if (items.length === 0) return null;
-                const config = levelConfig[level];
-                return (
-                  <div key={level}>
-                    <div className="text-xs font-semibold text-muted-foreground mb-1.5 mt-3">{config.label}</div>
-                    {items.map((item) => (
-                      <div key={item.id} className={`${config.bg} border rounded-lg p-3 mb-2`}>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2 min-w-0">
-                            <span className="text-lg shrink-0">{item.platformIcon}</span>
-                            <div className="min-w-0">
-                              <div className="font-medium text-sm">{item.title}</div>
-                              <div className="text-xs text-muted-foreground truncate">{item.url}</div>
-                              <div className={`text-xs mt-0.5 ${config.text}`}>{item.detail}</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex justify-center">
-            <Button size="lg" className="px-8" onClick={() => setStep("strategy")}>
-              确认处理 🔴 和 🟡 内容 →
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ============ STRATEGY ============ */}
-      {step === "strategy" && (
-        <div className="space-y-4">
-          <div className="rounded-xl border bg-card p-6">
-            <h2 className="font-semibold mb-1">🎯 策略分配</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Orchestrator 根据内容类型自动分配最优 Skill
-            </p>
-
-            <div className="space-y-3">
-              {allResults.filter((r) => r.level === "red" || r.level === "yellow").map((item) => (
-                <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                  <span className="text-lg">{item.platformIcon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{item.title}</div>
-                    <div className="text-xs text-muted-foreground">{item.detail}</div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">→</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 bg-background border rounded-full px-3 py-1.5 shrink-0">
-                    <span>{item.skillIcon}</span>
-                    <span className="text-xs font-medium">{item.assignedSkill}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Strategy summary */}
-            <div className="mt-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
-              <div className="text-sm font-semibold text-blue-800 mb-2">📋 执行计划</div>
-              <div className="text-xs text-blue-700 space-y-1">
-                <p>• <strong>Negotiator</strong> 将私信 3 位内容发布者（百度文库、微博博主、脉脉）</p>
-                <p>• <strong>Reporter</strong> 将提交 3 条举报（知乎、论坛、小红书）</p>
-                <p>• <strong>SEO Diluter</strong> 将制定正面内容发布策略</p>
-                <p>• <strong>Data Broker Cleanup</strong> 将检查并清理数据经纪人</p>
-                <p>• 如果 48h 内协商无果 → 自动升级到 Reporter</p>
-                <p>• 如果 7 天内举报无果 → 自动升级到 Legal Action</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-center">
-            <Button size="lg" className="px-8" onClick={() => setStep("executing")}>
-              ⚡ 开始执行
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ============ EXECUTING ============ */}
-      {step === "executing" && (
-        <div className="space-y-4">
-          <div className="rounded-xl border bg-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold">⚡ 多 Skill 并行执行中</h2>
-              <span className="text-sm text-muted-foreground font-mono">
-                {executionIndex}/{executionSteps.length}
+        {/* RESULTS — evidence table */}
+        {step === "results" && (
+          <div>
+            <header className="flex justify-between items-end border-b border-[var(--ink)] pb-2 mb-6">
+              <h2 className="font-[family-name:var(--font-mono)] text-[1.3rem] uppercase tracking-[-0.01em]">扫描结果</h2>
+              <span className="font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)]">
+                共 {allResults.length} 条 / 已选 {checked.size} 条
               </span>
+            </header>
+
+            <table className="w-full border-collapse font-[family-name:var(--font-mono)] text-[0.8rem] mb-6">
+              <thead>
+                <tr className="border-b border-[var(--ink)]">
+                  <th className="text-center py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] w-[40px] text-[0.7rem]">选</th>
+                  <th className="text-left py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem]">来源</th>
+                  <th className="text-left py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem]">内容</th>
+                  <th className="text-left py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem]">详情</th>
+                  <th className="text-right py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem] w-[60px]">风险</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allResults.map(item => (
+                  <tr key={item.id} className="border-b border-dotted border-[var(--border-faint)] hover:bg-[#E8E5DF] transition-colors">
+                    <td className="py-2.5 text-center">
+                      <label className="cursor-pointer select-none font-[family-name:var(--font-mono)]" onClick={() => toggleCheck(item.id)}>
+                        {checked.has(item.id) ? "[X]" : "[ ]"}
+                      </label>
+                    </td>
+                    <td className="py-2.5 text-[0.85rem]">{item.platform}</td>
+                    <td className="py-2.5 text-[0.85rem]">{item.title}</td>
+                    <td className="py-2.5 text-[var(--ink-light)] text-[0.8rem]">{item.detail}</td>
+                    <td className={`py-2.5 text-right ${riskColor[item.level]}`}>{riskIdx[item.level]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="flex justify-between items-center border-t border-[var(--ink)] pt-4">
+              <div className="font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)]">
+                已选待处理: {checked.size} 条
+              </div>
+              <button
+                onClick={() => setStep("strategy")}
+                className="bg-[var(--ink)] text-[var(--paper)] font-[family-name:var(--font-mono)] text-[0.85rem] uppercase tracking-[0.1em] px-6 py-2.5 hover:bg-[var(--redact)] transition-colors cursor-pointer"
+              >
+                确认处理 →
+              </button>
             </div>
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-4">
-              <div
-                className="h-full bg-violet-500 rounded-full transition-all duration-300"
-                style={{ width: `${(executionIndex / executionSteps.length) * 100}%` }}
-              />
+            <span className="block text-[0.7rem] text-[var(--ink-light)] mt-2 text-right">操作不可逆，请确认选择</span>
+          </div>
+        )}
+
+        {/* STRATEGY */}
+        {step === "strategy" && (
+          <div>
+            <header className="flex justify-between items-end border-b border-[var(--ink)] pb-2 mb-6">
+              <h2 className="font-[family-name:var(--font-mono)] text-[1.3rem] uppercase tracking-[-0.01em]">策略分配</h2>
+              <span className="font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)]">
+                类型 × 来源 → 手段
+              </span>
+            </header>
+
+            <table className="w-full border-collapse font-[family-name:var(--font-mono)] text-[0.8rem] mb-6">
+              <thead>
+                <tr className="border-b border-[var(--ink)]">
+                  <th className="text-left py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem]">内容</th>
+                  <th className="text-left py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem]">详情</th>
+                  <th className="text-right py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem] w-[100px]">分配手段</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allResults.filter(r => checked.has(r.id)).map(item => (
+                  <tr key={item.id} className="border-b border-dotted border-[var(--border-faint)] hover:bg-[#E8E5DF] transition-colors">
+                    <td className="py-2.5 text-[0.85rem]">{item.title}</td>
+                    <td className="py-2.5 text-[var(--ink-light)] text-[0.8rem]">{item.detail}</td>
+                    <td className="py-2.5 text-right font-medium">{item.assignedSkill || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="border border-[var(--border-faint)] p-4 mb-6">
+              <div className="font-[family-name:var(--font-mono)] text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-light)] mb-3">执行计划摘要</div>
+              <div className="text-[0.9rem] space-y-1.5 leading-[1.5]">
+                <p>· <strong>Self-Edit</strong> 直接修改 2 项自有账号内容（脉脉、LinkedIn）</p>
+                <p>· <strong>Negotiate</strong> 私信 2 位发布者（百度文库、微博博主）</p>
+                <p>· <strong>Report</strong> 提交 3 条举报（知乎、论坛、快照删除）</p>
+                <p>· <strong>SEO Dilute</strong> 并行制定正面内容策略</p>
+                <p className="text-[var(--ink-light)] text-[0.85rem]">48h 协商无果 → 自动升级 Report → 7天无果 → 律师函</p>
+              </div>
             </div>
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {executionLog.map((log, i) => (
-                <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/30 animate-in fade-in slide-in-from-bottom-2">
-                  <span className="text-lg shrink-0">{log.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm">{log.text}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
-                      <span className="font-mono">{log.time}</span>
-                      <span className="bg-muted rounded px-1.5 py-0.5">{log.skill}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {step === "executing" && executionIndex < executionSteps.length && (
-                <div className="flex items-center gap-2 p-2.5 text-muted-foreground">
-                  <span className="animate-spin">⏳</span>
-                  <span className="text-sm">执行中...</span>
-                </div>
-              )}
+
+            <div className="flex justify-between items-center border-t border-[var(--ink)] pt-4">
+              <div className="font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)]">
+                待执行: {checked.size} 项操作
+              </div>
+              <button
+                onClick={() => setStep("executing")}
+                className="bg-[var(--ink)] text-[var(--paper)] font-[family-name:var(--font-mono)] text-[0.85rem] uppercase tracking-[0.1em] px-6 py-2.5 hover:bg-[var(--redact)] transition-colors cursor-pointer"
+              >
+                开始执行 →
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ============ DONE ============ */}
-      {step === "done" && (
-        <div className="space-y-4">
-          <div className="rounded-xl border bg-card p-6">
-            <div className="text-center py-4">
-              <div className="text-5xl mb-4">🎉</div>
-              <h2 className="text-xl font-bold mb-2">第一轮处理完成</h2>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                已自动联系 3 位发布者，提交 4 条举报，制定 SEO 稀释策略。Agent 将持续跟进并自动升级。
-              </p>
+        {/* EXECUTING */}
+        {step === "executing" && (
+          <div>
+            <header className="flex justify-between items-end border-b border-[var(--ink)] pb-2 mb-6">
+              <h2 className="font-[family-name:var(--font-mono)] text-[1.3rem] uppercase tracking-[-0.01em]">执行中</h2>
+              <span className="font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)]">
+                {execIdx}/{execSteps.length}
+              </span>
+            </header>
+            <div className="w-full h-[3px] bg-[var(--border-faint)] mb-6">
+              <div className="h-full bg-[var(--ink)] transition-all duration-300" style={{ width: `${(execIdx / execSteps.length) * 100}%` }} />
             </div>
+            <table className="w-full border-collapse font-[family-name:var(--font-mono)] text-[0.8rem]">
+              <thead>
+                <tr className="border-b border-[var(--ink)]">
+                  <th className="text-center py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] w-[30px] text-[0.7rem]">#</th>
+                  <th className="text-left py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem]">操作</th>
+                  <th className="text-right py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem] w-[100px]">手段</th>
+                </tr>
+              </thead>
+              <tbody>
+                {executionLog.filter(Boolean).map((l, i) => (
+                  <tr key={i} className="border-b border-dotted border-[var(--border-faint)]">
+                    <td className="py-2 text-center text-[var(--ink-light)]">{String(i + 1).padStart(2, "0")}</td>
+                    <td className="py-2 text-[0.85rem]">{l.text}</td>
+                    <td className="py-2 text-right text-[var(--ink-light)]">{l.skill}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {execIdx < execSteps.length && (
+              <div className="mt-4 font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)] animate-pulse">
+                ▋ 执行中...
+              </div>
+            )}
+          </div>
+        )}
 
-            {/* Summary cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-              <SummaryCard icon="💬" label="已联系" value="3" desc="等待回复中" />
-              <SummaryCard icon="🚨" label="已举报" value="4" desc="平台处理中" />
-              <SummaryCard icon="📈" label="SEO 策略" value="1" desc="已制定计划" />
-              <SummaryCard icon="📊" label="监控" value="ON" desc="每周自动扫描" />
+        {/* DONE */}
+        {step === "done" && (
+          <div>
+            <header className="flex justify-between items-end border-b-2 border-[var(--ink)] pb-2 mb-6">
+              <h2 className="font-[family-name:var(--font-serif)] text-[2rem] tracking-[-0.02em]">第一轮完成</h2>
+              <span className="font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)]">
+                处理完毕
+              </span>
+            </header>
+
+            <p className="text-[1rem] leading-[1.6] text-[var(--ink-light)] mb-8 max-w-[500px]">
+              直接修改 2 项，联系 2 位发布者，提交 3 条举报，SEO 策略已启动。Agent 将持续跟进并自动升级。
+            </p>
+
+            {/* Stats */}
+            <div className="font-[family-name:var(--font-mono)] text-[0.85rem] mb-8">
+              <div className="flex items-baseline border-b border-dotted border-[var(--ink)] py-2">
+                <span className="w-[120px] shrink-0">直接修改</span>
+                <span className="flex-1 border-b border-dotted border-[var(--border-faint)] mx-3 relative top-[-3px]" />
+                <span className="font-medium text-[1.1rem]">2 项</span>
+              </div>
+              <div className="flex items-baseline border-b border-dotted border-[var(--ink)] py-2">
+                <span className="w-[120px] shrink-0">已联系</span>
+                <span className="flex-1 border-b border-dotted border-[var(--border-faint)] mx-3 relative top-[-3px]" />
+                <span className="font-medium text-[1.1rem]">2 人</span>
+              </div>
+              <div className="flex items-baseline border-b border-dotted border-[var(--ink)] py-2">
+                <span className="w-[120px] shrink-0">已举报</span>
+                <span className="flex-1 border-b border-dotted border-[var(--border-faint)] mx-3 relative top-[-3px]" />
+                <span className="font-medium text-[1.1rem]">3 条</span>
+              </div>
+              <div className="flex items-baseline border-b border-dotted border-[var(--ink)] py-2">
+                <span className="w-[120px] shrink-0">SEO 策略</span>
+                <span className="flex-1 border-b border-dotted border-[var(--border-faint)] mx-3 relative top-[-3px]" />
+                <span className="font-medium text-[1.1rem]">已启动</span>
+              </div>
+              <div className="flex items-baseline py-2">
+                <span className="w-[120px] shrink-0">持续监控</span>
+                <span className="flex-1 border-b border-dotted border-[var(--border-faint)] mx-3 relative top-[-3px]" />
+                <span className="font-medium text-[1.1rem]">ON</span>
+              </div>
             </div>
 
             {/* Escalation timeline */}
-            <div className="mt-6 p-4 rounded-lg bg-muted/50">
-              <div className="text-sm font-semibold mb-3">📅 自动升级时间线</div>
-              <div className="space-y-2 text-xs">
-                <TimelineItem time="48h 后" text="检查协商结果 — 未回复自动转 Reporter 举报" active />
-                <TimelineItem time="72h 后" text="微博负面帖 — 如协商失败，启动 SEO 稀释" active={false} />
-                <TimelineItem time="7 天后" text="检查举报结果 — 未处理的提交 Legal Action" active={false} />
-                <TimelineItem time="14 天后" text="向网信办/工信部提交正式投诉" active={false} />
-                <TimelineItem time="30 天后" text="全面评估 — 生成处理效果报告" active={false} />
-              </div>
+            <div className="border border-[var(--border-faint)] p-4 mb-8">
+              <div className="font-[family-name:var(--font-mono)] text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-light)] mb-3">自动升级时间线</div>
+              {[
+                { d: "48h", t: "检查协商结果，未回复自动转举报" },
+                { d: "72h", t: "微博负面帖，协商失败启动 SEO 稀释" },
+                { d: "7 天", t: "检查举报结果" },
+                { d: "14 天", t: "向网信办提交投诉" },
+                { d: "21 天", t: "投诉无果建议律师函" },
+                { d: "30 天", t: "全面评估，效果报告" },
+              ].map((item, i) => (
+                <div key={i} className="flex items-baseline border-b border-dotted border-[var(--border-faint)] py-2 last:border-b-0">
+                  <span className="font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)] w-[60px] shrink-0">{item.d}</span>
+                  <span className="text-[0.85rem]">{item.t}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-4 border-t border-[var(--ink)] pt-4">
+              <button onClick={onReset} className="font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)] hover:text-[var(--ink)] border-b border-dotted border-[var(--border-faint)] hover:border-[var(--ink)] transition-colors cursor-pointer">
+                ← 返回首页
+              </button>
+              <button
+                onClick={() => { setStep("scanning"); setScanProgress(0); setScanLog([]); setExecutionLog([]); setExecIdx(0); }}
+                className="font-[family-name:var(--font-mono)] text-[0.8rem] text-[var(--ink-light)] hover:text-[var(--ink)] border-b border-dotted border-[var(--border-faint)] hover:border-[var(--ink)] transition-colors cursor-pointer"
+              >
+                重新演示 →
+              </button>
             </div>
           </div>
-
-          <div className="flex justify-center gap-3">
-            <Button variant="outline" onClick={onReset}>← 返回首页</Button>
-            <Button onClick={() => {
-              setStep("scanning");
-              setScanProgress(0);
-              setScanLog([]);
-              setResults([]);
-              setExecutionLog([]);
-              setExecutionIndex(0);
-            }}>
-              🔄 重新演示
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SummaryCard({ icon, label, value, desc }: { icon: string; label: string; value: string; desc: string }) {
-  return (
-    <div className="rounded-lg border bg-background p-3 text-center">
-      <div className="text-xl mb-1">{icon}</div>
-      <div className="text-xl font-bold">{value}</div>
-      <div className="text-xs font-medium">{label}</div>
-      <div className="text-[10px] text-muted-foreground">{desc}</div>
-    </div>
-  );
-}
-
-function TimelineItem({ time, text, active }: { time: string; text: string; active: boolean }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${active ? "bg-blue-500" : "bg-muted-foreground/30"}`} />
-      <div>
-        <span className="font-mono font-semibold text-muted-foreground">{time}</span>
-        <span className="text-muted-foreground ml-2">{text}</span>
-      </div>
+        )}
+      </section>
     </div>
   );
 }

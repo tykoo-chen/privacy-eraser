@@ -2,196 +2,172 @@
 
 import { ArchitectureTree } from "@/components/demo/architecture-tree";
 
+const protocols = [
+  { layer: "用户层", proto: "Telegram Bot API", conn: "用户 → Agent", usage: "用户通过 Telegram 发消息触发" },
+  { layer: "工具层", proto: "MCP", conn: "Agent → 工具", usage: "Agent 调用 browser、web_search、cron" },
+  { layer: "Agent 层", proto: "ACP", conn: "Agent → Agent", usage: "Orchestrator 调度 Scanner / Negotiator / Reporter" },
+  { layer: "知识层", proto: "SKILL.md", conn: "指令 → Agent", usage: "每个 Skill 有独立 SKILL.md 定义行为" },
+];
+
 export default function ArchitecturePage() {
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold mb-2">Privacy Eraser 架构</h1>
-        <p className="text-muted-foreground">
-          1 个 Orchestrator + 7 个专业 Skill，ACP 协议通信，MCP 工具调用
-        </p>
-      </div>
+    <div className="max-w-[1200px] mx-auto px-8">
+      {/* Header */}
+      <section className="py-16 border-b border-[var(--border-faint)]">
+        <div className="max-w-[700px]">
+          <h1 className="font-[family-name:var(--font-serif)] text-[3.5rem] leading-[1.05] tracking-[-0.02em] font-normal mb-4">
+            系统架构
+          </h1>
+          <p className="text-[1rem] text-[var(--ink-light)] leading-[1.6]">
+            一个 Orchestrator 协调七个专业 Skill，ACP 协议通信，MCP 工具调用。
+          </p>
+        </div>
+      </section>
 
-      <ArchitectureTree />
+      {/* Architecture Tree */}
+      <section className="py-16 border-b border-[var(--border-faint)]">
+        <ArchitectureTree />
+      </section>
 
-      {/* Execution Logic */}
-      <div className="mt-16 grid md:grid-cols-2 gap-8">
-        {/* Skill Execution Logic */}
-        <div className="rounded-xl border bg-card p-6">
-          <h2 className="font-bold text-lg mb-4">① Skill 之间的执行逻辑</h2>
-          <div className="font-mono text-xs leading-relaxed space-y-0 whitespace-pre text-muted-foreground overflow-x-auto">
-{`用户输入姓名
+      {/* Execution Logic — side by side */}
+      <section className="py-16 border-b border-[var(--border-faint)]">
+        <div className="grid grid-cols-[280px_1fr] gap-16 max-md:grid-cols-1 max-md:gap-6">
+          <div>
+            <h2 className="font-[family-name:var(--font-serif)] text-[2.2rem] tracking-[-0.02em] leading-[1.1] mb-4">
+              执行逻辑
+            </h2>
+            <p className="text-[0.95rem] text-[var(--ink-light)] leading-[1.5]">
+              Skill 模式与 Agent 模式的对比。
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-8 max-md:grid-cols-1">
+            {/* Skill mode */}
+            <div className="border border-[var(--border-faint)] p-4">
+              <div className="font-[family-name:var(--font-mono)] text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-light)] mb-3">Skill 模式</div>
+              <pre className="font-[family-name:var(--font-mono)] text-[0.7rem] leading-relaxed text-[var(--ink-light)] whitespace-pre overflow-x-auto">
+{`用户输入
 │
 ▼
-┌──────────────────────────┐
-│  🎯 Privacy Eraser       │
-│     Orchestrator         │
-└──────────┬───────────────┘
-           │
-     ┌─────▼─────┐
-     │ 🔍 Scanner │ ← 第一个执行
-     └─────┬─────┘
-           │ 返回分类结果
-     ┌─────▼─────────────────────┐
-     │ 用户确认处理方向            │
-     └─────┬─────────────────────┘
-           │
-     ┌─────▼─────────────────────────┐
-     │ Orchestrator 策略决策树        │
-     │                               │
-     │  隐私泄露 ──→ 💬 Negotiator   │
-     │  有发布者     (先礼后兵)       │
-     │       │                       │
-     │  匿名内容 ──→ 🚨 Reporter    │
-     │  严重泄露     (直接举报)       │
-     │       │                       │
-     │  过时信息 ──→ 💬 Negotiator   │
-     │               (请求更新)       │
-     │       │                       │
-     │  负面但真 ──→ 📈 SEO Diluter │
-     │  无法删除     (信息稀释)       │
-     │       │                       │
-     │  数据买卖 ──→ 🗑️ Data Broker │
-     │               (Opt-out)       │
-     └──────┬────────────────────────┘
-            │
-      ┌─────▼──────────────────────┐
-      │  ⏰ 时间升级引擎            │
-      │                            │
-      │  48h 无回复                │
-      │  💬 Negotiator             │
-      │     → 🚨 Reporter          │
-      │                            │
-      │  7 天无结果                 │
-      │  🚨 Reporter               │
-      │     → ⚖️ Legal Action      │
-      │                            │
-      │  始终无法删除               │
-      │     → 📈 SEO Diluter       │
-      └─────┬──────────────────────┘
-            │
-      ┌─────▼──────────────────────┐
-      │  📊 Reputation Monitor     │
-      │  每周扫描 + 效果追踪        │
-      └────────────────────────────┘`}
-          </div>
-        </div>
+Orchestrator
+│
+├→ Scanner（第一步）
+│  返回分类结果
+│
+├→ 策略路由引擎
+│  ├ 自有账号 → Self-Edit
+│  ├ 有发布者 → Negotiate
+│  ├ 匿名严重 → Report
+│  └ 删不掉   → SEO Dilute
+│
+├→ 时间升级引擎
+│  Day 0 → Day 30
+│
+└→ Monitor ↻ Scanner
+   反馈循环`}
+              </pre>
+              <span className="block text-[0.7rem] text-[var(--ink-light)] mt-3 border-l-2 border-[var(--border-faint)] pl-2">
+                每个 Skill 独立、可复用，有自己的 SKILL.md
+              </span>
+            </div>
 
-        {/* Agent Execution Logic (without Skills) */}
-        <div className="rounded-xl border bg-card p-6">
-          <h2 className="font-bold text-lg mb-4">② Agent 之间的执行逻辑（无 Skill）</h2>
-          <div className="font-mono text-xs leading-relaxed space-y-0 whitespace-pre text-muted-foreground overflow-x-auto">
-{`用户消息（Telegram / Chat）
+            {/* Agent mode */}
+            <div className="border border-[var(--border-faint)] p-4">
+              <div className="font-[family-name:var(--font-mono)] text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-light)] mb-3">Agent 模式</div>
+              <pre className="font-[family-name:var(--font-mono)] text-[0.7rem] leading-relaxed text-[var(--ink-light)] whitespace-pre overflow-x-auto">
+{`用户消息 (Telegram)
 │
 ▼
-┌──────────────────────────────┐
-│  🤖 主 Agent (LLM)           │
-│  理解意图 + 制定计划          │
-│                              │
-│  MCP Tools:                  │
-│  ├─ web_search    搜索引擎   │
-│  ├─ browser       浏览器     │
-│  ├─ file_system   文件读写   │
-│  └─ cron          定时任务   │
-└──────────┬───────────────────┘
-           │
-           │  ACP 协议（未来）
-           │
-     ┌─────▼───────────────────┐
-     │  🔍 搜索子 Agent         │
-     │  执行多条搜索 query      │
-     │  调用 web_search MCP    │
-     │  返回结构化结果          │
-     └─────┬───────────────────┘
-           │
-     ┌─────▼───────────────────┐
-     │  🧠 分析子 Agent         │
-     │  对结果进行分类          │
-     │  判断风险等级            │
-     │  推荐处理策略            │
-     └─────┬───────────────────┘
-           │
-     ┌─────▼───────────────────┐
-     │  🔧 执行子 Agent         │
-     │                         │
-     │  并行执行:              │
-     │  ├─ 浏览器A → 私信平台1  │
-     │  ├─ 浏览器B → 举报平台2  │
-     │  └─ 浏览器C → 删快照    │
-     │                         │
-     │  调用 browser MCP       │
-     │  navigate / click /     │
-     │  fill / screenshot      │
-     └─────┬───────────────────┘
-           │
-     ┌─────▼───────────────────┐
-     │  📊 监控子 Agent         │
-     │  cron MCP 注册定时任务   │
-     │  定期重新搜索            │
-     │  对比状态变化            │
-     │  触发升级逻辑            │
-     └────────────────────────┘
-
-  ┌─────────────────────────────┐
-  │  关键区别：                  │
-  │                             │
-  │  Skill 模式:                │
-  │  Orchestrator 通过 ACP 调度 │
-  │  每个 Skill 独立、可复用    │
-  │  Skill 自带 SKILL.md 指令  │
-  │                             │
-  │  纯 Agent 模式:             │
-  │  主 Agent 直接用 MCP 工具   │
-  │  子 Agent 是 LLM 的内部分工│
-  │  没有独立的 Skill 定义      │
-  │  灵活但不可复用             │
-  └─────────────────────────────┘`}
+主 Agent (LLM)
+MCP Tools:
+├ web_search
+├ browser
+├ file_system
+└ cron
+│
+├→ 搜索子 Agent
+├→ 分析子 Agent
+├→ 执行子 Agent
+│  ├ 浏览器A → 私信
+│  ├ 浏览器B → 举报
+│  └ 浏览器C → 删快照
+│
+└→ 监控子 Agent
+   cron 定时任务`}
+              </pre>
+              <span className="block text-[0.7rem] text-[var(--ink-light)] mt-3 border-l-2 border-[var(--border-faint)] pl-2">
+                主 Agent 直接用 MCP 工具，子 Agent 是内部分工
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Protocol comparison */}
-      <div className="mt-8 rounded-xl border bg-card p-6">
-        <h2 className="font-bold text-lg mb-4">协议对照</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+      {/* Protocol table */}
+      <section className="py-16 border-b border-[var(--border-faint)]">
+        <div className="grid grid-cols-[280px_1fr] gap-16 max-md:grid-cols-1 max-md:gap-6">
+          <div>
+            <h2 className="font-[family-name:var(--font-serif)] text-[2.2rem] tracking-[-0.02em] leading-[1.1] mb-4">
+              四层协议
+            </h2>
+          </div>
+          <table className="font-[family-name:var(--font-mono)] text-[0.85rem] w-full border-collapse">
             <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 pr-4 font-semibold">层级</th>
-                <th className="text-left py-2 pr-4 font-semibold">协议</th>
-                <th className="text-left py-2 pr-4 font-semibold">连接</th>
-                <th className="text-left py-2 font-semibold">在本系统中</th>
+              <tr className="border-b border-[var(--ink)]">
+                <th className="text-left py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem]">层级</th>
+                <th className="text-left py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem]">协议</th>
+                <th className="text-left py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem]">连接</th>
+                <th className="text-left py-2 font-normal text-[var(--ink-light)] uppercase tracking-[0.05em] text-[0.7rem]">在本系统中</th>
               </tr>
             </thead>
-            <tbody className="text-muted-foreground">
-              <tr className="border-b">
-                <td className="py-2 pr-4">用户层</td>
-                <td className="py-2 pr-4 font-mono text-xs">Telegram Bot API</td>
-                <td className="py-2 pr-4">用户 → Agent</td>
-                <td className="py-2">用户通过 Telegram 发消息触发</td>
-              </tr>
-              <tr className="border-b">
-                <td className="py-2 pr-4">工具层</td>
-                <td className="py-2 pr-4 font-mono text-xs">MCP</td>
-                <td className="py-2 pr-4">Agent → 工具</td>
-                <td className="py-2">Agent 调用 browser、web_search、cron</td>
-              </tr>
-              <tr className="border-b">
-                <td className="py-2 pr-4">Agent 层</td>
-                <td className="py-2 pr-4 font-mono text-xs">ACP</td>
-                <td className="py-2 pr-4">Agent → Agent</td>
-                <td className="py-2">Orchestrator 调度 Scanner / Negotiator / Reporter...</td>
-              </tr>
-              <tr>
-                <td className="py-2 pr-4">知识层</td>
-                <td className="py-2 pr-4 font-mono text-xs">Skill (SKILL.md)</td>
-                <td className="py-2 pr-4">指令 → Agent</td>
-                <td className="py-2">每个 Skill 有独立 SKILL.md 定义行为</td>
-              </tr>
+            <tbody>
+              {protocols.map((p, i) => (
+                <tr key={i} className="border-b border-dotted border-[var(--border-faint)] hover:bg-[#E8E5DF] transition-colors">
+                  <td className="py-2.5">{p.layer}</td>
+                  <td className="py-2.5 font-medium">{p.proto}</td>
+                  <td className="py-2.5 text-[var(--ink-light)]">{p.conn}</td>
+                  <td className="py-2.5 text-[var(--ink-light)]">{p.usage}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
+
+      {/* Escalation chain */}
+      <section className="py-16 mb-12">
+        <div className="grid grid-cols-[280px_1fr] gap-16 max-md:grid-cols-1 max-md:gap-6">
+          <div>
+            <h2 className="font-[family-name:var(--font-serif)] text-[2.2rem] tracking-[-0.02em] leading-[1.1] mb-4">
+              升级链
+            </h2>
+            <p className="text-[0.95rem] text-[var(--ink-light)] leading-[1.5]">
+              先礼后兵。每一步失败自动切换到更强手段。
+            </p>
+          </div>
+          <div className="font-[family-name:var(--font-mono)] text-[0.9rem]">
+            {[
+              { n: "手段0", name: "Self-Edit", desc: "直接修改自有账号" },
+              { n: "手段1", name: "Negotiate", desc: "友好私信 → 正式函" },
+              { n: "手段2", name: "Report", desc: "平台举报 + 快照删除" },
+              { n: "手段3", name: "Cache Del", desc: "搜索引擎快照清除" },
+              { n: "手段4", name: "SEO Dilute", desc: "正面内容压制（并行）" },
+              { n: "手段5", name: "Legal", desc: "律师函 + 证据包" },
+            ].map((s, i, arr) => (
+              <div key={s.n}>
+                <div className="flex items-baseline border-b border-dotted border-[var(--ink)] py-3">
+                  <span className="text-[var(--ink-light)] w-[60px] shrink-0">{s.n}</span>
+                  <span className="font-medium w-[120px] shrink-0">{s.name}</span>
+                  <span className="flex-1 border-b border-dotted border-[var(--border-faint)] mx-3 relative top-[-3px]" />
+                  <span className="text-[var(--ink-light)] text-[0.85rem]">{s.desc}</span>
+                </div>
+                {i < arr.length - 1 && (
+                  <div className="text-[0.75rem] text-[var(--ink-light)] py-1 pl-[60px]">↓ 失败</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
