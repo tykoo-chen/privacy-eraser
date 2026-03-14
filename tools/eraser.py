@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Privacy Eraser CLI - 数字身份守护工具
+ErasePAST CLI - 数字身份守护工具
 """
 
 import os
@@ -270,7 +270,7 @@ def cmd_scan(args):
     print("  3. 调用 eraser.py add <url> 添加案例")
 
 def main():
-    parser = argparse.ArgumentParser(description='Privacy Eraser - 数字身份守护')
+    parser = argparse.ArgumentParser(description='ErasePAST - 数字身份守护')
     subparsers = parser.add_subparsers(dest='command')
     
     # add 命令

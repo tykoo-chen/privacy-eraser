@@ -1,7 +1,7 @@
 ---
 name: privacy-report
 description: |
-  Cross-platform privacy violation reporting tool for Privacy Eraser.
+  Cross-platform privacy violation reporting tool for ErasePAST.
   Automate reporting/flagging of privacy-violating content across platforms (Google, Twitter/X, Facebook/Meta, Instagram, LinkedIn, Reddit, TikTok, YouTube, data broker sites).
   Use when: (1) user wants to report content that exposes personal info, (2) file DMCA/GDPR/privacy takedown requests, (3) bulk report across multiple platforms, (4) track report status.
   Triggers: "report this", "take down", "remove my info", "file complaint", "privacy report", "举报", "删除我的信息", "隐私投诉".
@@ -9,7 +9,7 @@ description: |
 
 # Privacy Report Skill
 
-Automate privacy violation reporting across platforms. Designed to work with Privacy Eraser as a nested skill.
+Automate privacy violation reporting across platforms. Designed to work with ErasePAST as a nested skill.
 
 ## Workflow
 
@@ -92,12 +92,12 @@ Log all submissions to `privacy-reports.json`:
 }
 ```
 
-## Integration with Privacy Eraser
+## Integration with ErasePAST
 
-This skill is designed to be called by Privacy Eraser after scanning discovers exposed personal information. The flow:
+This skill is designed to be called by ErasePAST after scanning discovers exposed personal information. The flow:
 
-1. Privacy Eraser scans → finds exposed URLs
+1. ErasePAST scans → finds exposed URLs
 2. This skill receives the URL list
 3. Classifies each by platform
 4. Generates and submits reports
-5. Returns tracking IDs to Privacy Eraser
+5. Returns tracking IDs to ErasePAST
